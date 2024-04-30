@@ -10,6 +10,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.Vec3;
@@ -191,8 +192,16 @@ public class ScarecrowTracker {
         Set<BlockPos> scarecrows = SCARECROWS_PER_WORLD.getOrDefault(level, Collections.emptySet());
         for(BlockPos scarecrow : scarecrows){
             Vec3 center = Vec3.atCenterOf(scarecrow);
-            if(Math.abs(center.x - pos.x) <= range && Math.abs(center.y - pos.y) <= range && Math.abs(center.z - pos.z) <= range)
+            if(Math.abs(center.x - pos.x) <= range && Math.abs(center.y - pos.y) <= range && Math.abs(center.z - pos.z) <= range) {
+                BlockState state = level.getBlockState(scarecrow);
+                boolean bottom = state.getValue(ScarecrowBlock.BOTTOM);
+                BlockPos otherHalf = bottom ? scarecrow.above() : scarecrow.below();
+                BlockState otherHalfState = level.getBlockState(otherHalf);
+                if ((state.hasProperty(ScarecrowBlock.POWERED) && state.getValue(ScarecrowBlock.POWERED))
+                        || (otherHalfState.hasProperty(ScarecrowBlock.POWERED) && otherHalfState.getValue(ScarecrowBlock.POWERED)))
+                    return false;
                 return true;
+            }
         }
 
         return false;
