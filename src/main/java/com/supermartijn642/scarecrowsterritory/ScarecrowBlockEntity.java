@@ -1,7 +1,10 @@
 package com.supermartijn642.scarecrowsterritory;
 
+import com.mojang.math.Vector3f;
 import com.supermartijn642.core.block.BaseBlockEntity;
+import com.supermartijn642.core.block.TickableBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -10,12 +13,13 @@ import net.minecraft.world.item.DyeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.Fluids;
 
 /**
  * Created 11/30/2020 by SuperMartijn642
  */
-public class ScarecrowBlockEntity extends BaseBlockEntity {
+public class ScarecrowBlockEntity extends BaseBlockEntity implements TickableBlockEntity {
 
     private final ScarecrowType type;
 
@@ -51,6 +55,23 @@ public class ScarecrowBlockEntity extends BaseBlockEntity {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void update() {
+        if (level.isClientSide) {
+            BlockPos pos = this.worldPosition;
+            BlockState state = this.level.getBlockState(pos);
+            if (state.getBlock() instanceof ScarecrowBlock && state.getValue(BlockStateProperties.POWERED)) {
+                boolean bottom = state.getValue(ScarecrowBlock.BOTTOM);
+                double x = pos.getX() + 0.5;
+                double y = pos.getY() - 0.9 + (bottom ? 1 : 0);
+                double z = pos.getZ() + 0.5;
+                    level.addParticle(
+                            new DustParticleOptions(new Vector3f(1.0F, 0.0F, 0.0F), 1.0F),
+                            x, y, z, 0.0, 0.5,0.0);
+            }
+        }
     }
 
     @Override
