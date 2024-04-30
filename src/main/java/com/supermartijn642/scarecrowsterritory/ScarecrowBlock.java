@@ -42,6 +42,7 @@ public class ScarecrowBlock extends BaseBlock implements EntityHoldingBlock, Sim
     public static final BooleanProperty BOTTOM = BooleanProperty.create("bottom");
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
+    public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
     private final ScarecrowType type;
 
@@ -49,7 +50,7 @@ public class ScarecrowBlock extends BaseBlock implements EntityHoldingBlock, Sim
         super(false, type.getBlockProperties(color));
         this.type = type;
 
-        this.registerDefaultState(this.defaultBlockState().setValue(FACING, Direction.NORTH).setValue(BOTTOM, true).setValue(WATERLOGGED, false));
+        this.registerDefaultState(this.defaultBlockState().setValue(FACING, Direction.NORTH).setValue(BOTTOM, true).setValue(WATERLOGGED, false).setValue(POWERED, false));
     }
 
     @Override
@@ -75,14 +76,14 @@ public class ScarecrowBlock extends BaseBlock implements EntityHoldingBlock, Sim
         if(this.type.is2BlocksHigh() && !context.getLevel().isEmptyBlock(context.getClickedPos().above()) && context.getLevel().getBlockState(context.getClickedPos().above()).getBlock() != Blocks.WATER)
             return null;
         FluidState fluidState = context.getLevel().getFluidState(context.getClickedPos());
-        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite()).setValue(WATERLOGGED, fluidState.getType() == Fluids.WATER);
+        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite()).setValue(WATERLOGGED, fluidState.getType() == Fluids.WATER).setValue(POWERED, context.getLevel().hasNeighborSignal(context.getClickedPos()));
     }
 
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack){
         if(this.type.is2BlocksHigh() && !level.isEmptyBlock(pos) && level.getBlockState(pos).getBlock() != Blocks.WATER){
             FluidState fluidState = level.getFluidState(pos.above());
-            level.setBlockAndUpdate(pos.above(), state.setValue(BOTTOM, false).setValue(WATERLOGGED, fluidState.getType() == Fluids.WATER));
+            level.setBlockAndUpdate(pos.above(), state.setValue(BOTTOM, false).setValue(WATERLOGGED, fluidState.getType() == Fluids.WATER).setValue(POWERED, level.hasNeighborSignal(pos)));
         }
     }
 
@@ -100,7 +101,7 @@ public class ScarecrowBlock extends BaseBlock implements EntityHoldingBlock, Sim
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block,BlockState> builder){
-        builder.add(FACING, BOTTOM, WATERLOGGED);
+        builder.add(FACING, BOTTOM, WATERLOGGED, POWERED);
     }
 
     @Override
@@ -119,6 +120,17 @@ public class ScarecrowBlock extends BaseBlock implements EntityHoldingBlock, Sim
             level.scheduleTick(currentPos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         return super.updateShape(state, facing, facingState, level, currentPos, facingPos);
     }
+
+    @Override
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
+        super.neighborChanged(state, level, pos, block, fromPos, isMoving);
+
+        boolean hasSignal = level.hasNeighborSignal(pos);
+        if (hasSignal != state.getValue(POWERED)) {
+            level.setBlock(pos, state.setValue(POWERED, hasSignal), 7);
+        }
+    }
+
 
     @Override
     protected void appendItemInformation(ItemStack stack, @Nullable BlockGetter level, Consumer<Component> info, boolean advanced){
